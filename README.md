@@ -6,10 +6,7 @@ Frontend dla raportu o ekonomii tokenów w sesjach agentów kodujących. Cały d
 
 ## Co zawiera
 
-Dwa dokumenty źródłowe złożone w jedną rolkę:
-
-- `source/FINDINGS.md` - pełny raport: 24 tezy warstwy 1, sondy warstwy 1b, klasyfikacja promptów, werdykty sędziego, syntezy krzyżowe, zastrzeżenia, rekomendacje
-- `source/SIX_THESES.md` - sześć tez z pełnymi definicjami operacyjnymi i tabelami
+Dwa dokumenty źródłowe złożone w jedną rolkę: pełny raport (24 tezy warstwy 1, sondy warstwy 1b, klasyfikacja promptów, werdykty sędziego, syntezy krzyżowe, zastrzeżenia, rekomendacje) oraz sześć tez z pełnymi definicjami operacyjnymi i tabelami. Same pliki źródłowe są trzymane poza tym repozytorium.
 
 Zbiór: SWE-chat enhanced 2026-07-05, 9 770 sesji, 17,8 GB transkryptów, 344 repozytoria, harnessy Claude Code, Codex, OpenCode i Cursor. Łączny koszt populacji: 116 677 USD, rozłożony na pojedyncze wywołanie API i pojedynczy wynik narzędzia.
 
