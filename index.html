@@ -1,0 +1,1288 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rachunek za tokeny</title>
+<meta name="description" content="Co naprawde kosztuje w sesjach agentow kodujacych. 9 770 sesji, 17,8 GB transkryptow, 116 677 USD rozlozone na pojedyncze wywolanie API.">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="fonts.css">
+<style>html{-webkit-text-size-adjust:100%}body{margin:0}img,svg{display:block;max-width:100%}</style>
+</head>
+<body>
+<style>
+/* ============================================================
+   PARAGON
+   Cały dokument to jedna rolka z drukarki termicznej.
+   Papier: ciepła bibuła. Tusz: prawie czarny. Akcent: rdza.
+   Zaznaczenia: zakreślacz. Zero zaokrągleń, wszystko monospace.
+   ============================================================ */
+:root{
+  --counter:#171411;        /* blat, na którym leży rolka */
+  --counter-2:#0E0C0A;
+  --paper:#FBF9F4;
+  --paper-2:#F2EDE3;        /* pasek wyróżniony na papierze */
+  --ink:#1A1611;
+  --ink-2:#4A443C;
+  --ink-3:#7D7568;
+  --faint:#DED8CB;          /* nienadrukowane tło słupka */
+  --rust:#B9523C;
+  --rust-deep:#7D3529;
+  --highlight:#EEDD9C;      /* zakreślacz */
+  --band:rgba(26,22,17,.030);
+  /* gęstość nadruku: od największej pozycji do najmniejszej */
+  --s1:#7D3529; --s2:#B9523C; --s3:#D3937F; --s4:#E8CCC2;
+  --sans:"Schibsted Grotesk","Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"Fragment Mono",ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+  --roll:720px;
+  --pad:clamp(20px,5vw,46px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --counter:#080706; --counter-2:#000;
+    --paper:#191511; --paper-2:#211C17;
+    --ink:#EDE6D9; --ink-2:#B6AD9E; --ink-3:#867D6F;
+    --faint:#332C24;
+    --rust:#E08462; --rust-deep:#F0A88E;
+    --highlight:#4A3D18;
+    --band:rgba(255,248,230,.030);
+    --s1:#F0A88E; --s2:#DE7A5F; --s3:#9C4E37; --s4:#5C3226;
+  }
+}
+:root[data-theme="dark"]{
+  --counter:#080706; --counter-2:#000;
+  --paper:#191511; --paper-2:#211C17;
+  --ink:#EDE6D9; --ink-2:#B6AD9E; --ink-3:#867D6F;
+  --faint:#332C24;
+  --rust:#E08462; --rust-deep:#F0A88E;
+  --highlight:#4A3D18;
+  --band:rgba(255,248,230,.030);
+  --s1:#F0A88E; --s2:#DE7A5F; --s3:#9C4E37; --s4:#5C3226;
+}
+:root[data-theme="light"]{
+  --counter:#171411; --counter-2:#0E0C0A;
+  --paper:#FBF9F4; --paper-2:#F2EDE3;
+  --ink:#1A1611; --ink-2:#4A443C; --ink-3:#7D7568;
+  --faint:#DED8CB;
+  --rust:#B9523C; --rust-deep:#7D3529;
+  --highlight:#EEDD9C;
+  --band:rgba(26,22,17,.030);
+  --s1:#7D3529; --s2:#B9523C; --s3:#D3937F; --s4:#E8CCC2;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:62px}
+body{
+  margin:0;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,.04), transparent 60%),
+    var(--counter);
+  color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.72;
+  font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+h1,h2,h3,h4,p,ul,ol,table,figure{margin:0}
+ul,ol{padding:0;list-style:none}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--rust);outline-offset:2px}
+::selection{background:var(--highlight);color:var(--ink)}
+
+/* ---------- listwa kasy ---------- */
+.till{
+  position:sticky;top:0;z-index:60;
+  background:var(--counter-2);
+  border-bottom:1px solid rgba(255,255,255,.09);
+}
+.till-in{
+  max-width:1140px;margin:0 auto;padding:0 14px;height:46px;
+  display:flex;align-items:center;gap:12px;
+}
+.till-tag{
+  color:var(--rust);font-size:11px;letter-spacing:.16em;white-space:nowrap;
+  text-decoration:none;display:flex;align-items:center;gap:7px;
+}
+.till-tag::before{content:"";width:7px;height:7px;background:var(--rust);display:block;animation:blip 2.4s steps(1,end) infinite}
+@keyframes blip{0%,70%{opacity:1}71%,100%{opacity:.25}}
+.till-nav{display:flex;gap:12px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.till-nav::-webkit-scrollbar{display:none}
+.till-nav a{
+  font-size:10.5px;letter-spacing:.1em;text-decoration:none;color:#8C8478;white-space:nowrap;
+  padding:4px 0;border-bottom:1px solid transparent;transition:color .16s,border-color .16s;
+}
+.till-nav a:hover{color:#EDE6D9}
+.till-nav a.on{color:#EDE6D9;border-color:var(--rust)}
+.till-sum{font-size:11px;color:#D3B64F;white-space:nowrap;padding-left:12px;border-left:1px solid rgba(255,255,255,.12)}
+.tbtn{
+  appearance:none;background:transparent;border:1px solid rgba(255,255,255,.22);color:#EDE6D9;
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:5px 8px;cursor:pointer;flex:none;
+}
+.tbtn:hover{background:rgba(255,255,255,.08)}
+.feed{position:absolute;left:0;bottom:-1px;height:2px;background:var(--rust);width:0}
+@media (max-width:640px){.till-sum{display:none}}
+
+/* ---------- rolka ---------- */
+.roll{
+  max-width:var(--roll);margin:0 auto;position:relative;
+  background:var(--paper);
+  box-shadow:0 0 0 1px rgba(0,0,0,.14), 0 30px 70px -30px rgba(0,0,0,.75);
+  padding:0 var(--pad) 0;
+}
+/* drobne pasmowanie druku termicznego */
+.roll::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:repeating-linear-gradient(180deg, var(--band) 0 1px, transparent 1px 4px);
+}
+.roll > *{position:relative;z-index:2}
+
+/* rwane krawędzie rolki */
+.tear{height:14px;max-width:var(--roll);margin:0 auto;background:var(--paper);position:relative}
+.tear::after{
+  content:"";position:absolute;left:0;right:0;height:14px;background:var(--counter);
+  -webkit-mask:repeating-conic-gradient(from -45deg at 50% 0,#000 0 25%,#0000 0 50%) 50% 0/18px 28px repeat-x;
+  mask:repeating-conic-gradient(from -45deg at 50% 0,#000 0 25%,#0000 0 50%) 50% 0/18px 28px repeat-x;
+}
+.tear.top::after{bottom:0;transform:scaleY(-1)}
+.tear.bot::after{top:0}
+
+/* ---------- typografia paragonu ---------- */
+.cap{text-align:center}
+.brand{
+  font-family:var(--sans);font-weight:800;letter-spacing:-.035em;line-height:.9;
+  font-size:clamp(38px,9vw,72px);text-align:center;text-wrap:balance;
+}
+.brand .r{color:var(--rust)}
+.slug{
+  text-align:center;font-size:11px;letter-spacing:.24em;color:var(--ink-3);
+  text-transform:uppercase;
+}
+.rule{border:none;border-top:1px dashed var(--ink-3);opacity:.6;margin:18px 0}
+.rule.solid{border-top-style:solid;opacity:.85}
+.rule.thick{border-top:2px solid var(--ink);opacity:1}
+.stars{text-align:center;letter-spacing:.5em;color:var(--ink-3);font-size:11px;margin:6px 0}
+
+h2.sec{
+  text-align:center;font-family:var(--mono);font-weight:400;
+  font-size:clamp(14px,2.3vw,17px);letter-spacing:.2em;text-transform:uppercase;
+  line-height:1.5;text-wrap:balance;
+}
+h2.sec .r{color:var(--rust)}
+h3.sub{
+  font-family:var(--mono);font-weight:400;font-size:13px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--ink);
+}
+.pos{
+  display:flex;align-items:center;gap:12px;justify-content:center;
+  font-size:10.5px;letter-spacing:.22em;color:var(--rust);text-transform:uppercase;margin-bottom:10px;
+}
+.pos::before,.pos::after{content:"";height:1px;flex:1;background:currentColor;opacity:.45;max-width:90px}
+
+p{color:var(--ink-2);line-height:1.78}
+p + p{margin-top:12px}
+p b,p strong{color:var(--ink);font-weight:400;background:var(--highlight);padding:0 3px}
+em{font-style:normal;color:var(--ink)}
+
+/* ---------- sekcje rolki ---------- */
+.blk{padding:clamp(30px,5vw,48px) 0}
+.perf{
+  position:relative;height:0;border-top:1px dashed var(--ink-3);opacity:.75;
+  margin:0 calc(var(--pad) * -1);
+}
+.perf::before,.perf::after{
+  content:"";position:absolute;top:-7px;width:14px;height:14px;border-radius:50%;
+  background:var(--counter);
+}
+.perf::before{left:-7px}
+.perf::after{right:-7px}
+
+/* ---------- pozycje z kropkami ---------- */
+.li{display:flex;align-items:baseline;gap:7px;padding:2px 0}
+.li .k{color:var(--ink-2);min-width:0}
+.li .dots{flex:1;border-bottom:1px dotted var(--ink-3);opacity:.55;transform:translateY(-4px);min-width:14px}
+.li .v{white-space:nowrap;color:var(--ink)}
+.li.tot{font-size:15px;padding-top:6px}
+.li.tot .k{color:var(--ink);letter-spacing:.1em}
+.li.tot .v{font-size:19px;letter-spacing:-.02em}
+.li.big .v{color:var(--rust)}
+.li.sm{font-size:11.5px}
+.li.sm .k{color:var(--ink-3)}
+.mark{background:var(--highlight);color:var(--ink);padding:0 4px}
+.rust{color:var(--rust)}
+.faintc{color:var(--ink-3)}
+.qty{color:var(--ink-3);font-size:11px}
+
+/* ---------- nadruk słupka (dot-matrix) ---------- */
+.pbar{height:12px;background:var(--faint);position:relative;overflow:hidden}
+.pbar i{
+  display:block;height:100%;width:0;
+  background:repeating-linear-gradient(90deg,var(--rust) 0 2px,transparent 2px 3px);
+  transition:width .9s cubic-bezier(.2,.8,.25,1);
+}
+.pbar i.dim{background:repeating-linear-gradient(90deg,var(--ink-3) 0 2px,transparent 2px 3px)}
+.pbar i.deep{background:repeating-linear-gradient(90deg,var(--rust-deep) 0 2px,transparent 2px 3px)}
+.brow{display:grid;grid-template-columns:var(--lb,116px) 1fr var(--vb,74px);gap:10px;align-items:center;padding:3px 0}
+.brow .lb{font-size:11.5px;color:var(--ink-2);text-align:right;overflow-wrap:anywhere;line-height:1.3}
+.brow .vb{font-size:11.5px;text-align:right;color:var(--ink)}
+.brow.hi .vb{color:var(--rust)}
+@media (max-width:560px){.brow{grid-template-columns:var(--lb,84px) 1fr 62px}}
+.axis{font-size:10px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;margin-top:8px}
+
+/* ---------- pasek składników (nadruk zbiorczy) ---------- */
+.stack{display:flex;align-items:stretch}
+.stack .sg{display:flex;flex-direction:column;min-width:0;transition:opacity .18s}
+.stack .sg:hover{opacity:.82}
+.stack .sg > i{display:block;height:42px;border:1px solid var(--ink);border-left:none}
+.stack .sg:first-child > i{border-left:1px solid var(--ink)}
+.stack .sg > span{
+  font-size:10px;line-height:1.2;color:var(--ink-2);padding-top:7px;
+  overflow:hidden;white-space:nowrap;letter-spacing:.02em;
+}
+
+/* ---------- waffle ---------- */
+.waf{display:grid;grid-template-columns:repeat(25,1fr);gap:2px;margin-top:4px}
+.waf i{aspect-ratio:1;background:var(--faint);display:block}
+
+/* ---------- tabele jako pozycje paragonu ---------- */
+.tw{overflow-x:auto;margin:0 calc(var(--pad) * -1);padding:0 var(--pad)}
+.tw::-webkit-scrollbar{height:7px}
+.tw::-webkit-scrollbar-thumb{background:var(--ink-3)}
+table{border-collapse:collapse;width:100%;min-width:480px;font-size:11.5px}
+thead th{
+  text-align:left;padding:5px 10px 5px 0;font-weight:400;color:var(--ink-3);
+  letter-spacing:.1em;text-transform:uppercase;font-size:9.5px;
+  border-bottom:1px solid var(--ink);white-space:nowrap;
+}
+tbody td{padding:5px 10px 5px 0;color:var(--ink-2);border-bottom:1px dotted var(--ink-3);vertical-align:top;line-height:1.5}
+tbody td:last-child,thead th:last-child{padding-right:0}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--paper-2)}
+td.n,th.n{text-align:right;white-space:nowrap;color:var(--ink)}
+tbody tr.emph td{color:var(--ink);background:var(--highlight)}
+tbody tr.emph:hover td{background:var(--highlight)}
+caption{caption-side:bottom;text-align:left;padding-top:9px;font-size:10.5px;color:var(--ink-3);line-height:1.55}
+
+/* ---------- bloki pomocnicze ---------- */
+.note{
+  border-left:2px solid var(--rust);padding:9px 0 9px 12px;margin:16px 0;
+  font-size:11.5px;color:var(--ink-3);line-height:1.66;
+}
+.def{font-size:11px;color:var(--ink-3);line-height:1.7;margin-top:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:clamp(16px,3vw,30px)}
+@media (max-width:600px){.two{grid-template-columns:1fr}}
+.kpi{text-align:center;padding:10px 0}
+.kpi .v{font-family:var(--sans);font-weight:800;letter-spacing:-.035em;font-size:clamp(30px,6vw,46px);line-height:.95;color:var(--rust)}
+.kpi .v.ink{color:var(--ink)}
+.kpi .k{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-top:9px;line-height:1.5}
+.boxrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--ink)}
+.boxrow > div{padding:14px 12px;border-right:1px dashed var(--ink-3)}
+.boxrow > div:last-child{border-right:none}
+.boxrow .bv{font-size:20px;letter-spacing:-.02em;color:var(--ink)}
+.boxrow .bk{font-size:10.5px;color:var(--ink-3);margin-top:6px;line-height:1.45}
+
+/* ---------- ponumerowane pozycje ---------- */
+.items{display:flex;flex-direction:column}
+.item{
+  display:grid;grid-template-columns:26px 1fr;gap:10px;
+  padding:13px 0;border-bottom:1px dotted var(--ink-3);
+}
+.item:last-child{border-bottom:none}
+.item .ix{color:var(--rust);font-size:11px}
+.item .hd{display:block;color:var(--ink);line-height:1.55}
+.item .bd{display:block;color:var(--ink-2);font-size:12px;line-height:1.66;margin-top:4px}
+.item .amt{display:flex;align-items:baseline;gap:7px;margin-top:7px;font-size:11.5px}
+.item .amt .dots{flex:1;border-bottom:1px dotted var(--ink-3);opacity:.5;transform:translateY(-4px)}
+.item .amt .src{color:var(--ink-3);font-size:10px;letter-spacing:.1em}
+.item .amt .val{color:var(--rust)}
+
+/* ---------- pieczątka ---------- */
+.stampwrap{display:flex;justify-content:center;padding:8px 0 2px}
+.stamp{
+  border:2px solid var(--rust);outline:1px solid var(--rust);outline-offset:3px;
+  color:var(--rust);padding:12px 20px;transform:rotate(-3.2deg);
+  text-align:center;letter-spacing:.22em;font-size:12px;line-height:1.6;
+  opacity:.88;
+}
+.stamp b{display:block;font-family:var(--sans);font-weight:800;font-size:19px;letter-spacing:.06em}
+
+/* ---------- kod kreskowy ---------- */
+.barcode{display:flex;gap:2px;align-items:flex-end;height:54px;justify-content:center;margin-top:6px}
+.barcode i{display:block;background:var(--ink);height:100%}
+.qr{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;width:82px;margin:0 auto}
+.qr i{aspect-ratio:1;background:transparent}
+.qr i.on{background:var(--ink)}
+
+/* ---------- małym drukiem ---------- */
+.fine{font-size:10.5px;line-height:1.7;color:var(--ink-3)}
+.fine b{color:var(--ink-2);background:none;padding:0}
+.fine .li .k{color:var(--ink-3)}
+.cols2{columns:2;column-gap:26px}
+@media (max-width:600px){.cols2{columns:1}}
+.cols2 > div{break-inside:avoid;padding:8px 0;display:grid;grid-template-columns:22px 1fr;gap:8px}
+.cols2 .ix{color:var(--rust)}
+
+/* ---------- zalecenia ---------- */
+.rec{padding:4px 0 0}
+.rec li{
+  padding:9px 0 9px 30px;text-indent:-30px;
+  border-bottom:1px dotted var(--ink-3);
+  font-size:12px;color:var(--ink-2);line-height:1.65;
+}
+.rec li:last-child{border-bottom:none}
+.rec li::before{content:"[x]\00a0\00a0";color:var(--rust);font-size:11px}
+.rec li b{color:var(--ink);background:var(--highlight);padding:0 3px}
+
+/* ---------- tooltip ---------- */
+.tip{
+  position:fixed;z-index:90;pointer-events:none;opacity:0;transform:translate(-50%,-130%);
+  background:var(--counter-2);color:#EDE6D9;border:1px solid #4A423A;padding:7px 10px;
+  font-family:var(--mono);font-size:11px;line-height:1.5;white-space:nowrap;transition:opacity .12s;
+}
+.tip b{color:#D3B64F;background:none;padding:0;font-weight:400}
+
+/* ---------- druk ---------- */
+@media (prefers-reduced-motion:reduce){
+  .pbar i{transition:none}
+  .till-tag::before{animation:none}
+  html{scroll-behavior:auto}
+}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:12px;top:10px;z-index:99;background:var(--counter-2);color:#EDE6D9;padding:9px 13px;font-size:12px}
+</style>
+
+<a class="skip" href="#paragon">Przejdź do treści</a>
+
+<div class="till">
+  <div class="till-in">
+    <a class="till-tag" href="#gora">KASA&nbsp;DUCKDB-01</a>
+    <nav class="till-nav" id="tillnav" aria-label="Pozycje paragonu">
+      <a href="#suma">SUMA</a>
+      <a href="#pozycje">10 POZYCJI</a>
+      <a href="#czynsz">CZYNSZ</a>
+      <a href="#kawa">KAWA</a>
+      <a href="#tryby">TRYBY</a>
+      <a href="#ludzie">LUDZIE</a>
+      <a href="#sondy">SONDY</a>
+      <a href="#szesc">6 TEZ</a>
+      <a href="#metoda">METODA</a>
+      <a href="#zalecenia">ZALECENIA</a>
+    </nav>
+    <span class="till-sum">116 677,00 USD</span>
+    <button class="tbtn" id="themeBtn" type="button" aria-label="Przełącz motyw">TUSZ</button>
+    <div class="feed" id="feed" aria-hidden="true"></div>
+  </div>
+</div>
+
+<div class="tear top" aria-hidden="true"></div>
+
+<main class="roll" id="paragon">
+
+<!-- ══════════ NAGŁÓWEK ══════════ -->
+<section class="blk" id="gora" style="padding-top:clamp(34px,6vw,58px)">
+  <p class="slug">paragon niefiskalny &nbsp;·&nbsp; kopia dla klienta</p>
+  <div style="height:20px"></div>
+  <h1 class="brand">RACHUNEK<br>ZA TOKENY<span class="r">.</span></h1>
+  <div style="height:20px"></div>
+  <p class="slug">co naprawdę kosztuje w sesjach agentów kodujących</p>
+
+  <hr class="rule">
+  <div class="li sm"><span class="k">zbiór</span><span class="dots"></span><span class="v">SWE-chat enhanced 2026-07-05</span></div>
+  <div class="li sm"><span class="k">okres</span><span class="dots"></span><span class="v">marzec &#8211; lipiec 2026</span></div>
+  <div class="li sm"><span class="k">data wydruku</span><span class="dots"></span><span class="v">11 września 2026</span></div>
+  <div class="li sm"><span class="k">odniesienie</span><span class="dots"></span><span class="v">arXiv 2604.20779</span></div>
+  <hr class="rule">
+
+  <p>17,8&nbsp;GB surowych transkryptów z Claude Code, Codeksa, OpenCode i Cursora, rozłożone na pojedyncze wywołanie API i pojedynczy wynik narzędzia. Nie na poziom sesji. Nie na poziom commitu.</p>
+  <p>Wniosek mieści się w jednym zdaniu: <b>optymalizowanie liczby tokenów wyjściowych jest złym celem</b>. Pieniądze siedzą w tym, co siedzi w kontekście i jest opłacane przy każdym kolejnym wywołaniu, a decyduje o tym harness, nie model.</p>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ SUMA ══════════ -->
+<section class="blk rv" id="suma">
+  <div class="pos">pozycja 00 &nbsp;/&nbsp; podsumowanie</div>
+  <h2 class="sec">Rachunek to cache,<br><span class="r">nie prompt</span></h2>
+  <hr class="rule">
+
+  <div class="li"><span class="k">sesje <span class="qty">344 repozytoria</span></span><span class="dots"></span><span class="v">9 770</span></div>
+  <div class="li"><span class="k">wywołania API</span><span class="dots"></span><span class="v">933 529</span></div>
+  <div class="li"><span class="k">wywołania narzędzi</span><span class="dots"></span><span class="v">1 086 824</span></div>
+  <div class="li"><span class="k">prompty ludzkie <span class="qty">po odsianiu</span></span><span class="dots"></span><span class="v">87 887</span></div>
+  <div class="li"><span class="k">zdarzenia meta</span><span class="dots"></span><span class="v">2 637 254</span></div>
+
+  <hr class="rule">
+  <div class="li"><span class="k">odczyty cache <span class="qty">63,9%</span></span><span class="dots"></span><span class="v">74 556,00</span></div>
+  <div class="li"><span class="k">zapisy cache <span class="qty">22,3%</span></span><span class="dots"></span><span class="v">26 019,00</span></div>
+  <div class="li"><span class="k">output <span class="qty">9,2%</span></span><span class="dots"></span><span class="v">10 734,00</span></div>
+  <div class="li"><span class="k">świeży input <span class="qty">4,6%</span></span><span class="dots"></span><span class="v">5 367,00</span></div>
+  <hr class="rule thick">
+  <div class="li tot"><span class="k">SUMA USD</span><span class="dots"></span><span class="v" id="grand">116 677,00</span></div>
+  <div style="text-align:center;margin-top:14px"><span class="mark" style="letter-spacing:.12em">86% TEGO RACHUNKU TO SAM CACHE</span></div>
+
+  <div style="height:26px"></div>
+  <div class="stack" id="stack" role="img" aria-label="Podział kosztu: odczyty cache 63,9 procent, zapisy cache 22,3 procent, output 9,2 procent, świeży input 4,6 procent."></div>
+  <div class="axis">udział składników w łącznym koszcie</div>
+
+  <hr class="rule">
+  <div class="two">
+    <div>
+      <h3 class="sub">Wg harnessu</h3>
+      <div style="height:10px"></div>
+      <div class="bars" data-bars='[{"l":"Claude Code","v":96741,"max":96741,"hi":1,"f":"96 741"},{"l":"Codex","v":19048,"max":96741,"f":"19 048"},{"l":"OpenCode","v":887,"max":96741,"f":"887"},{"l":"Cursor","v":0,"max":96741,"f":"n/d","dim":1}]' style="--lb:86px;--vb:56px"></div>
+      <div class="axis">USD</div>
+    </div>
+    <div>
+      <h3 class="sub">Wg modelu</h3>
+      <div style="height:10px"></div>
+      <div class="bars" data-bars='[{"l":"opus-4-6","v":37314,"max":37314,"hi":1,"f":"37 314"},{"l":"opus-4-7","v":29285,"max":37314,"f":"29 285"},{"l":"opus-4-8","v":21444,"max":37314,"f":"21 444"},{"l":"gpt-5.5","v":15697,"max":37314,"f":"15 697"},{"l":"fable-5","v":4739,"max":37314,"f":"4 739"}]' style="--lb:74px;--vb:56px"></div>
+      <div class="axis">USD</div>
+    </div>
+  </div>
+  <div class="note">Mediana sesji to 2,50 USD, ale rozkład ma bardzo długi ogon: najdroższa pojedyncza sesja kosztowała 1 678 USD. Fable 5 zebrał 4 739 USD w zaledwie 88 sesjach. Cursor nie loguje tokenów, więc jest niewyceniony; modele spoza cennika to 2,9% wywołań.</div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ DZIESIĘĆ POZYCJI ══════════ -->
+<section class="blk rv" id="pozycje">
+  <div class="pos">pozycje 01 &#8211; 10 &nbsp;/&nbsp; streszczenie</div>
+  <h2 class="sec">Co wyszło</h2>
+  <hr class="rule">
+  <p class="fine" style="text-align:center;margin-bottom:14px">Wszystkie liczby policzone na całej populacji, o ile nie zaznaczono inaczej</p>
+  <hr class="rule">
+  <ol class="items" id="items"></ol>
+  <hr class="rule thick">
+  <div class="stampwrap">
+    <div class="stamp"><b>ZA CO PŁACIMY</b>trzy pierwsze pozycje &nbsp;·&nbsp; ponad 60% rachunku<br>wszystkie w rękach harnessu</div>
+  </div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ CZYNSZ ══════════ -->
+<section class="blk rv" id="czynsz">
+  <div class="pos">pozycja 11 &nbsp;/&nbsp; T04</div>
+  <h2 class="sec">Token wrzucony raz<br><span class="r">płaci do końca sesji</span></h2>
+  <hr class="rule">
+  <p>Czynsz wyniku narzędzia to jego tokeny razy liczba późniejszych wywołań w tej samej sesji, wyceniona po cenie odczytu cache. W Claude Code wyniki narzędzi odpowiadają za <b>51% wszystkich tokenów odczytu cache</b>.</p>
+
+  <div style="height:22px"></div>
+  <h3 class="sub">Czynsz wg narzędzia, Claude Code</h3>
+  <div style="height:12px"></div>
+  <div class="bars" data-bars='[{"l":"Read","v":15712,"max":15712,"hi":1,"f":"15 712"},{"l":"Bash","v":7175,"max":15712,"f":"7 175"},{"l":"MCP","v":3804,"max":15712,"f":"3 804"},{"l":"Task","v":1898,"max":15712,"f":"1 898"},{"l":"Grep","v":830,"max":15712,"f":"830"}]' style="--lb:56px;--vb:58px"></div>
+  <hr class="rule">
+  <div class="li tot"><span class="k">RAZEM CZYNSZ</span><span class="dots"></span><span class="v rust">30 746,00</span></div>
+  <hr class="rule">
+
+  <div class="tw">
+    <table>
+      <caption>T04. Średni wynik Read siedzi w kontekście przez kolejne 190 wywołań, wynik Basha przez 224. Wyniki powyżej 10 tys. znaków to 5,3% wszystkich, a generują 61% czynszu.</caption>
+      <thead><tr><th>Narzędzie</th><th class="n">Wyników</th><th class="n">Znaków</th><th class="n">Śr. późn.</th><th class="n">Czynsz USD</th></tr></thead>
+      <tbody>
+        <tr><td>Read</td><td class="n">141 736</td><td class="n">782 mln</td><td class="n">190</td><td class="n">15 712</td></tr>
+        <tr><td>Bash</td><td class="n">283 632</td><td class="n">289 mln</td><td class="n">224</td><td class="n">7 175</td></tr>
+        <tr><td>MCP</td><td class="n">12 384</td><td class="n">279 mln</td><td class="n">191</td><td class="n">3 804</td></tr>
+        <tr><td>Task</td><td class="n">17 622</td><td class="n">91 mln</td><td class="n">183</td><td class="n">1 898</td></tr>
+        <tr><td>Grep</td><td class="n">38 784</td><td class="n">41 mln</td><td class="n">180</td><td class="n">830</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="rule">
+  <h3 class="sub">Ile z dużego wyniku było potrzebne</h3>
+  <p class="def">Sędzia DeepSeek V4-Pro czyta wycinek transkryptu wokół wyniku powyżej 5 tys. znaków i orzeka, jaką jego część model faktycznie wykorzystał. n = 612, przedziały ufności Wilsona 95%.</p>
+  <div style="height:14px"></div>
+  <div class="waf" id="waf" aria-hidden="true"></div>
+  <div style="height:16px"></div>
+  <ul id="judgeLeg"></ul>
+  <div class="note">Warstwa „najdroższe wg czynszu” i „losowa” dają identyczny wynik, 32,3% kontra 32,4%, więc to własność populacji, nie ogona. Co najmniej jedna trzecia z 30 746 USD to czynsz za dane, których model nigdy nie tknął, a 97% to czynsz za dane, z których potrzebował ułamka.</div>
+
+  <hr class="rule">
+  <div class="boxrow">
+    <div><div class="bv rust">5,3% &#8594; 61%</div><div class="bk">wyniki powyżej 10 tys. znaków: ułamek wszystkich, większość całego czynszu</div></div>
+    <div><div class="bv">56%</div><div class="bk">Readów zaraz po kompakcji dotyczy plików, które model czytał już przed nią</div></div>
+    <div><div class="bv">23 104</div><div class="bk">Ready pliku, który model sam zapisał albo edytował w poprzednich 5 wywołaniach</div></div>
+  </div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ KAWA ══════════ -->
+<section class="blk rv" id="kawa">
+  <div class="pos">pozycja 12 &nbsp;/&nbsp; T02</div>
+  <h2 class="sec">Przerwa na kawę<br><span class="r">kosztuje 9 223 USD</span></h2>
+  <hr class="rule">
+  <p>Cache prompt żyje 5 minut albo godzinę. Jeśli człowiek nie odpowie przed wygaśnięciem, cały kontekst jest zapisywany od nowa, po cenie od 1,25 do 2 razy wyższej niż zwykły input. Pęknięciem nazywamy zapis cache o rozmiarze co najmniej połowy poprzedniego kontekstu.</p>
+
+  <div style="height:22px"></div>
+  <div class="bars" data-bars='[{"l":"poniżej 1 min","v":0.6,"max":83.6,"f":"0,6%","dim":1},{"l":"1 do 5 min","v":2.4,"max":83.6,"f":"2,4%","dim":1},{"l":"5 do 60 min","v":7.8,"max":83.6,"f":"7,8%"},{"l":"ponad 60 min","v":83.6,"max":83.6,"hi":1,"f":"83,6%"}]' style="--lb:104px;--vb:54px"></div>
+  <div class="axis">odsetek wywołań, przy których cache pękł</div>
+
+  <hr class="rule">
+  <div class="tw">
+    <table>
+      <caption>T02. Wywołania po przerwie dłuższej niż 5 minut to 3,7% wszystkich, a odpowiadają za 39% kosztu zapisów cache i 8% całego rachunku.</caption>
+      <thead><tr><th>Przerwa</th><th class="n">Wywołań</th><th class="n">Pęknięć</th><th class="n">USD zapisów</th></tr></thead>
+      <tbody>
+        <tr><td>poniżej 1 min</td><td class="n">582 011</td><td class="n">0,6%</td><td class="n">2 977</td></tr>
+        <tr><td>1 do 5 min</td><td class="n">59 077</td><td class="n">2,4%</td><td class="n">2 007</td></tr>
+        <tr><td>5 do 60 min</td><td class="n">20 781</td><td class="n">7,8%</td><td class="n">2 371</td></tr>
+        <tr class="emph"><td>ponad 60 min</td><td class="n">3 629</td><td class="n">83,6%</td><td class="n">6 852</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">To koszt czysto harnessowy. Po godzinnej przerwie najtańszą decyzją byłoby dopisanie krótkiego „ping” przed końcem TTL albo świadome zaczęcie nowej sesji.</div>
+
+  <hr class="rule">
+  <h3 class="sub">Narzędzie edycji jest ważniejsze od modelu</h3>
+  <p class="def">Sędzia ocenił, czy pełne przepisanie pliku, który model miał już w kontekście, było potrzebne. Próba losowa, n = 336.</p>
+  <div style="height:14px"></div>
+  <div class="bars" data-bars='[{"l":"Cursor","v":95.3,"max":100,"hi":1,"f":"95,3%"},{"l":"CC vibe","v":92.5,"max":100,"hi":1,"f":"92,5%"},{"l":"CC human","v":87.5,"max":100,"hi":1,"f":"87,5%"},{"l":"OpenCode","v":87.5,"max":100,"hi":1,"f":"87,5%"},{"l":"Codex","v":44.3,"max":100,"f":"44,3%","dim":1}]' style="--lb:78px;--vb:54px"></div>
+  <div class="axis">odsetek zbędnych pełnych przepisań pliku</div>
+  <div class="note">Codex wypada radykalnie lepiej we wszystkich warstwach próby, bo apply_patch nie ma trybu „zapisz cały plik” jako domyślnego. To argument, że o marnotrawstwie decyduje projekt narzędzia, nie inteligencja modelu. Typowe uzasadnienie sędziego: <em>agent właśnie przeczytał plan, chciał zmienić dwie linie w sekcji todo i zapisał cały plik od nowa</em>.</div>
+
+  <hr class="rule">
+  <h3 class="sub">Narzut serializacji JSON</h3>
+  <div style="height:12px"></div>
+  <div class="bars" data-bars='[{"l":"CC Edit","v":10.2,"max":10.2,"hi":1,"f":"10,2%"},{"l":"CC Write","v":7.3,"max":10.2,"f":"7,3%"},{"l":"OpenCode edit","v":5.8,"max":10.2,"f":"5,8%"},{"l":"apply_patch","v":4.8,"max":10.2,"f":"4,8%","dim":1}]' style="--lb:104px;--vb:54px"></div>
+  <div class="axis">ważony znakami &nbsp;·&nbsp; apply_patch jest strukturalnie o połowę tańszy, bo patch to jeden surowy string</div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ TRYBY ══════════ -->
+<section class="blk rv" id="tryby">
+  <div class="pos">pozycja 13 &nbsp;/&nbsp; T01, T12, T15</div>
+  <h2 class="sec">Vibe coding płaci<br><span class="r">6,7 razy więcej za linię</span></h2>
+  <hr class="rule">
+  <p class="def">Tryby zdefiniowane jak w paperze: vibe to atrybucja agenta co najmniej 95%, human co najwyżej 5%. Zastrzeżenie, które trzeba powtórzyć: w trybie human linie w commicie pisze człowiek, więc ten mianownik mierzy co innego.</p>
+
+  <div style="height:20px"></div>
+  <div class="li"><span class="k">human <span class="qty">2 574 sesji · 3 830 tok. kontekstu / linię</span></span><span class="dots"></span><span class="v">0,0029</span></div>
+  <div class="li"><span class="k">collab <span class="qty">2 018 sesji · 8 754 tok. kontekstu / linię</span></span><span class="dots"></span><span class="v">0,0066</span></div>
+  <div class="li big"><span class="k">vibe <span class="qty">4 072 sesji · 26 099 tok. kontekstu / linię</span></span><span class="dots"></span><span class="v">0,0193</span></div>
+  <div class="axis" style="text-align:right">USD na linię w commicie</div>
+
+  <div style="height:18px"></div>
+  <div class="bars" data-bars='[{"l":"human","v":3830,"max":26099,"f":"3 830","dim":1},{"l":"collab","v":8754,"max":26099,"f":"8 754"},{"l":"vibe","v":26099,"max":26099,"hi":1,"f":"26 099"}]' style="--lb:56px;--vb:58px"></div>
+  <div class="axis">tokeny kontekstu na jedną linię w commicie</div>
+
+  <hr class="rule">
+  <div class="tw">
+    <table>
+      <caption>T15. Rozpiętość między najtańszym a najdroższym harnessem to nominalnie 78 razy, ale jest zdominowana przez OpenCode na darmowych modelach. Z kontrolą modelu i trybu różnice są rzędu 1,5 do 2 razy. Porównanie harnessów bez tej kontroli jest bezwartościowe.</caption>
+      <thead><tr><th>Tryb</th><th class="n">Claude Code</th><th class="n">Codex</th><th class="n">OpenCode</th></tr></thead>
+      <tbody>
+        <tr><td>collab</td><td class="n">0,037</td><td class="n">0,0036</td><td class="n">0,0003</td></tr>
+        <tr><td>human</td><td class="n">0,017</td><td class="n">0,015</td><td class="n">0,0012</td></tr>
+        <tr><td>vibe</td><td class="n">0,084</td><td class="n">0,049</td><td class="n">0,0005</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="rule">
+  <h3 class="sub">T12. Godziny ludzkie kontra tokeny</h3>
+  <div style="height:14px"></div>
+  <div class="two">
+    <div class="kpi"><div class="v ink">113 945</div><div class="k">USD za tokeny w 16 358 godzinach pracy agenta, czyli 7 USD za godzinę</div></div>
+    <div class="kpi"><div class="v">981 000</div><div class="k">USD, gdyby człowiek patrzył na spinner za 60 USD za godzinę</div></div>
+  </div>
+  <div class="note">Stosunek 8,6 razy. To górna granica, bo zakłada, że człowiek czeka, ale nawet przy jednej czwartej przypadków czas ludzki nadal przebija rachunek za API. Mediana tury agenta to 70 s, 90. percentyl 686 s. Wniosek dla producentów harnessów: opłaca się płacić więcej za tokeny, jeśli skraca to czas tury.</div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ LUDZIE ══════════ -->
+<section class="blk rv" id="ludzie">
+  <div class="pos">pozycja 14 &nbsp;/&nbsp; warstwa 2</div>
+  <h2 class="sec">Najdroższe słowo<br>to <span class="r">„ok”</span></h2>
+  <hr class="rule">
+  <p>87 887 promptów napisanych przez ludzi, sklasyfikowanych przez DeepSeek V4-Flash z kontekstem poprzedniej odpowiedzi agenta. Zero błędów, 3,64 USD. Potem do etykiety doklejono koszt wszystkich wywołań aż do następnego promptu.</p>
+
+  <div style="height:20px"></div>
+  <div id="promptChart"></div>
+
+  <div class="note">Pushback, czyli korekta albo zgłoszenie błędu, to 14,5% rachunku: <b>16 548 USD</b>. To jest cena mówienia agentowi, że zrobił to źle. Tury po sfrustrowanym promptcie nie są droższe od neutralnych, mediana 0,53 kontra 0,51 USD, więc frustracja nie eskaluje kosztu, tylko oznacza, że koszt już poszedł. Najdroższą kategorią jest „approval”: 18% rachunku uruchamia dwuliterowe „ok”, czyli tury, w których agent dostaje wolną rękę po zaprezentowaniu planu.</div>
+
+  <hr class="rule">
+  <div class="two">
+    <div>
+      <h3 class="sub">T11. Nieprzeczytane</h3>
+      <div style="height:12px"></div>
+      <div class="bars" data-bars='[{"l":"Codex","v":26.5,"max":26.5,"hi":1,"f":"26,5%"},{"l":"Claude Code","v":20.2,"max":26.5,"f":"20,2%"},{"l":"OpenCode","v":20.2,"max":26.5,"f":"20,2%"}]' style="--lb:82px;--vb:52px"></div>
+      <div class="axis">udział tokenów końcowych odpowiedzi, których człowiek nie zdążył przeczytać</div>
+    </div>
+    <div>
+      <h3 class="sub">T24. Kto pisze prompt</h3>
+      <div style="height:12px"></div>
+      <div class="bars" data-bars='[{"l":"harness","v":376.8,"max":376.8,"hi":1,"f":"376,8"},{"l":"człowiek","v":126.2,"max":376.8,"f":"126,2","dim":1}]' style="--lb:66px;--vb:52px"></div>
+      <div class="axis">mln znaków po stronie promptu</div>
+    </div>
+  </div>
+  <div class="note">21% tokenów końcowych odpowiedzi trafia do nikogo. W dolarach to tylko 89 USD, bo output końcowy jest tani; koszt prawdziwy to czynsz tych akapitów w kolejnych wywołaniach i uwaga człowieka. Po stronie promptu 74,9% znaków to szept harnessu: system-reminders, wyniki hooków, przypomnienia o zadaniach, diagnostyka, w 235 503 zdarzeniach załączników.</div>
+
+  <hr class="rule">
+  <h3 class="sub">T17. Tryby uprawnień: hipoteza obalona</h3>
+  <div style="height:12px"></div>
+  <div class="tw">
+    <table>
+      <caption>„Bypass znaczy więcej śmieci” się nie potwierdza: bypass jest tańszy na linię niż default i ma mniej błędów. Sesje w acceptEdits są za to 4 razy droższe, mediana 13,4 USD: to tryb długich, ciężkich sesji.</caption>
+      <thead><tr><th>Tryb</th><th class="n">Sesji</th><th class="n">USD / linię</th><th class="n">Błędy</th><th class="n">Mediana USD</th></tr></thead>
+      <tbody>
+        <tr><td>bypassPermissions</td><td class="n">719</td><td class="n">0,024</td><td class="n">3,0%</td><td class="n">3,46</td></tr>
+        <tr><td>auto</td><td class="n">356</td><td class="n">0,025</td><td class="n">2,6%</td><td class="n">8,95</td></tr>
+        <tr><td>acceptEdits</td><td class="n">360</td><td class="n">0,037</td><td class="n">2,6%</td><td class="n">13,40</td></tr>
+        <tr class="emph"><td>default</td><td class="n">437</td><td class="n">0,048</td><td class="n">3,2%</td><td class="n">2,25</td></tr>
+        <tr><td>plan</td><td class="n">27</td><td class="n">0,015</td><td class="n">3,6%</td><td class="n">3,32</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ SONDY ══════════ -->
+<section class="blk rv" id="sondy">
+  <div class="pos">pozycja 15 &nbsp;/&nbsp; warstwa 1b</div>
+  <h2 class="sec">Czego ledger<br><span class="r">nie przechowuje</span></h2>
+  <hr class="rule">
+  <p class="def">Ledger trzyma długości i hashe, nie treść. Cztery sondy po 3 000 losowych próbek każda, ze stałym ziarnem i 100% trafień w surowe rekordy. Jedna z nich nie wynikała z żadnej hipotezy.</p>
+
+  <hr class="rule">
+  <div class="li"><span class="k">01 &nbsp; obrazki w base64 <span class="qty">1,4% wywołań Read &#8594; 33% znaków z Read</span></span><span class="dots"></span><span class="v">311,00</span></div>
+  <div class="li"><span class="k">02 &nbsp; redundancja wyników Basha <span class="qty">953 mln znaków</span></span><span class="dots"></span><span class="v rust">~1 050,00</span></div>
+  <div class="li"><span class="k">03 &nbsp; numery linii w Read <span class="qty">9,3% znaków wyniku</span></span><span class="dots"></span><span class="v">89,00</span></div>
+  <div class="li"><span class="k">04 &nbsp; narzut serializacji JSON <span class="qty">6,9 mln tokenów</span></span><span class="dots"></span><span class="v">167,00</span></div>
+  <div class="li"><span class="k">05 &nbsp; wcięcia i nowe linie w treści <span class="qty">rs 16%, tsx 19%, go 3%</span></span><span class="dots"></span><span class="v">140,00</span></div>
+  <div class="axis" style="text-align:right">USD po cenie inputu, bez czynszu</div>
+
+  <hr class="rule">
+  <h3 class="sub">Kompresowalność wyników Basha</h3>
+  <p class="def">1,33 mld znaków wyników Bash w zbiorze, z czego sam Codex 1,0 mld, czyli 3,5 razy więcej niż Claude Code.</p>
+  <div style="height:14px"></div>
+  <div class="bars" data-bars='[{"l":"poniżej 2x","v":7.0,"max":35.4,"f":"7,0%","dim":1},{"l":"2 do 3x","v":24.1,"max":35.4,"f":"24,1%"},{"l":"3 do 5x","v":35.4,"max":35.4,"hi":1,"f":"35,4%"},{"l":"5 do 10x","v":25.8,"max":35.4,"hi":1,"f":"25,8%"},{"l":"10 do 20x","v":6.2,"max":35.4,"hi":1,"f":"6,2%"},{"l":"20x i więcej","v":1.4,"max":35.4,"hi":1,"f":"1,4%"}]' style="--lb:96px;--vb:54px"></div>
+  <div class="axis">udział znaków według stopnia kompresji gzip</div>
+  <div class="note">93% znaków z Basha siedzi w wynikach, które gzip ściska co najmniej dwukrotnie. To największa pojedyncza liczba w sondach i największa dźwignia dla harnessów: streszczanie albo obcinanie logów przed wrzuceniem do kontekstu. Z ~1 050 USD redundancji około 800 USD przypada na Codeksa.</div>
+
+  <hr class="rule">
+  <div class="boxrow">
+    <div><div class="bv rust">260 mln</div><div class="bk">znaków obrazów w base64, około 65 mln tokenów. Wyłącznie Claude Code</div></div>
+    <div><div class="bv">603 zn.</div><div class="bk">mediana odpowiedzi końcowej w Claude Code: 1,1 nagłówka i 3,3 punktora</div></div>
+    <div><div class="bv">16%</div><div class="bk">wyników narzędzi to dokładne powtórki wcześniejszego wyniku w tej samej sesji</div></div>
+  </div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ SZEŚĆ TEZ ══════════ -->
+<section class="blk rv" id="szesc">
+  <div class="pos">paragon dodatkowy &nbsp;/&nbsp; sześć tez</div>
+  <h2 class="sec">Sześć tez<span class="r">: dane</span></h2>
+  <hr class="rule">
+  <p class="def">Sześć wątków wyciągniętych z ledgera z pełnymi definicjami operacyjnymi. Tokeny z wyników narzędzi liczone jako znaki przez 4, linie wygenerowane jako znaki przez 40.</p>
+  <div id="six"></div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ METODA ══════════ -->
+<section class="blk rv" id="metoda">
+  <div class="pos">specyfikacja &nbsp;/&nbsp; dane i metoda</div>
+  <h2 class="sec">Model czyta tylko to,<br><span class="r">co wymaga osądu</span></h2>
+  <hr class="rule">
+  <p>Wszystko, co da się policzyć deterministycznie, jest policzone na całości i za darmo. Surowe pliki zostały jednorazowo przepisane do pięciu płaskich tabel Parquet: 248 MB, 24 sekundy na 6 rdzeniach. Walidacja z metadanymi: tokeny wyjściowe zgodne co do tokena w 7 241 z 7 242 sesji Claude Code.</p>
+
+  <hr class="rule">
+  <div class="li"><span class="k">warstwa 1 &nbsp;<span class="qty">24 tezy jako SQL w DuckDB, cała populacja &nbsp;·&nbsp; 10 s</span></span><span class="dots"></span><span class="v">0,00</span></div>
+  <div class="li"><span class="k">warstwa 1b <span class="qty">sondy na surowych plikach &nbsp;·&nbsp; 11 s</span></span><span class="dots"></span><span class="v">0,00</span></div>
+  <div class="li"><span class="k">warstwa 2 &nbsp;<span class="qty">klasyfikacja 87 887 promptów, V4-Flash &nbsp;·&nbsp; 3 min</span></span><span class="dots"></span><span class="v">3,64</span></div>
+  <div class="li"><span class="k">warstwa 3 &nbsp;<span class="qty">sędzia V4-Pro, 1 400 przypadków &nbsp;·&nbsp; 2 min</span></span><span class="dots"></span><span class="v">1,96</span></div>
+  <hr class="rule solid">
+  <div class="li tot"><span class="k">KOSZT ANALIZY</span><span class="dots"></span><span class="v">5,60</span></div>
+
+  <hr class="rule">
+  <h3 class="sub">Cennik, USD za milion tokenów</h3>
+  <div style="height:12px"></div>
+  <div class="tw">
+    <table>
+      <caption>Ceny z dnia analizy. OpenAI raportuje input_tokens łącznie z cache, więc koszt to (input minus cache) razy cena plus cache razy cena cache.</caption>
+      <thead><tr><th>Model</th><th class="n">input</th><th class="n">odczyt cache</th><th class="n">zapis 5 min</th><th class="n">zapis 1 h</th><th class="n">output</th></tr></thead>
+      <tbody>
+        <tr><td>claude-opus-4-5 do 4-8</td><td class="n">5</td><td class="n">0,5</td><td class="n">6,25</td><td class="n">10</td><td class="n">25</td></tr>
+        <tr><td>claude-sonnet-4-5, 4-6</td><td class="n">3</td><td class="n">0,3</td><td class="n">3,75</td><td class="n">6</td><td class="n">15</td></tr>
+        <tr><td>claude-sonnet-5</td><td class="n">2</td><td class="n">0,2</td><td class="n">2,5</td><td class="n">4</td><td class="n">10</td></tr>
+        <tr><td>claude-fable-5</td><td class="n">10</td><td class="n">1</td><td class="n">12,5</td><td class="n">20</td><td class="n">50</td></tr>
+        <tr><td>claude-haiku-4-5</td><td class="n">1</td><td class="n">0,1</td><td class="n">1,25</td><td class="n">2</td><td class="n">5</td></tr>
+        <tr><td>gpt-5.5</td><td class="n">5</td><td class="n">0,5</td><td class="n">&#8211;</td><td class="n">&#8211;</td><td class="n">30</td></tr>
+        <tr><td>gpt-5.4</td><td class="n">2,5</td><td class="n">0,25</td><td class="n">&#8211;</td><td class="n">&#8211;</td><td class="n">15</td></tr>
+        <tr><td>gpt-5.4-mini</td><td class="n">0,75</td><td class="n">0,075</td><td class="n">&#8211;</td><td class="n">&#8211;</td><td class="n">4,5</td></tr>
+        <tr><td>gpt-5.3-codex</td><td class="n">1,75</td><td class="n">0,175</td><td class="n">&#8211;</td><td class="n">&#8211;</td><td class="n">14</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="rule">
+  <h3 class="sub">Pułapki w danych, które trzeba znać</h3>
+  <div style="height:10px"></div>
+  <ul class="fine" style="display:flex;flex-direction:column">
+    <li style="padding:8px 0;border-bottom:1px dotted var(--ink-3)"><b>files_touched</b> to pliki w commicie łącznie z edycjami człowieka, nie pliki edytowane przez agenta. Do „co edytował agent” służą wyłącznie wywołania narzędzi.</li>
+    <li style="padding:8px 0;border-bottom:1px dotted var(--ink-3)">Claude Code dzieli jedną odpowiedź na kilka linii z tym samym <b>message.id</b>, a <b>output_tokens</b> rośnie między nimi. Trzeba brać maksimum, nie pierwszą wartość.</li>
+    <li style="padding:8px 0;border-bottom:1px dotted var(--ink-3)">Codex stempluje ostatnie wywołanie tury już po następnym promptcie użytkownika, w 8 966 z 13 441 tur. Bez korekty każda analiza czasu reakcji człowieka na Codeksie jest fałszywa.</li>
+    <li style="padding:8px 0;border-bottom:1px dotted var(--ink-3)"><b>session_id</b> nie jest unikalne: 180 duplikatów. Kluczem jest nazwa pliku. 65 sesji oznaczonych jako Claude Code to fizycznie logi Cursora, więc parser wybiera format po treści.</li>
+    <li style="padding:8px 0;border-bottom:1px dotted var(--ink-3)">Thinking w Claude Code jest pusty. Zostają tylko zaszyfrowane sygnatury: 255 KB sygnatur na 9 KB tekstu w próbce.</li>
+    <li style="padding:8px 0">OpenCode zapisuje sesję jako jeden ładnie sformatowany JSON, nie JSONL. Cursor nie loguje ani tokenów, ani timestampów, ani wyników narzędzi.</li>
+  </ul>
+
+  <hr class="rule">
+  <h3 class="sub">Zastrzeżenia</h3>
+  <div style="height:10px"></div>
+  <div class="cols2 fine" id="caveats"></div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ ZALECENIA ══════════ -->
+<section class="blk rv" id="zalecenia">
+  <div class="pos">do zapłaty &nbsp;/&nbsp; zalecenia</div>
+  <h2 class="sec">Co z tym<br><span class="r">zrobić</span></h2>
+  <hr class="rule">
+
+  <h3 class="sub">Dla twórców harnessów <span class="faintc">&nbsp;&nbsp;~60% rachunku</span></h3>
+  <ul class="rec">
+    <li><b>Obcinać i streszczać wyniki Basha</b> przed wrzuceniem do kontekstu. 93% ich znaków to powtarzalny szum, a 32% dużych wyników nigdy nie jest użytych.</li>
+    <li><b>Nie zwracać obrazów jako base64 w Read</b> domyślnie. 1,4% wywołań robi 33% znaków.</li>
+    <li><b>Usuwać wyniki starsze niż N wywołań</b> zamiast czekać na kompakcję, po której model i tak czyta te same pliki ponownie w 56% przypadków.</li>
+    <li><b>Pilnować TTL cache.</b> Ping przed wygaśnięciem albo jawne „zacznij nową sesję” po przerwie ponad godzinę. To 8% rachunku.</li>
+    <li><b>Preferować narzędzie edycji typu patch</b> nad „zapisz cały plik”. Różnica między 44% a 90% zbędnych przepisań.</li>
+    <li><b>Zredukować wstrzykiwane przypomnienia.</b> Harness pisze 75% promptu.</li>
+  </ul>
+
+  <hr class="rule">
+  <h3 class="sub">Dla użytkowników <span class="faintc">&nbsp;&nbsp;nawyki</span></h3>
+  <ul class="rec">
+    <li><b>Krótkie przerwy albo nowa sesja</b> po dłuższej. Nie zostawiać sesji na godzinę i wracać do niej.</li>
+    <li><b>Prosić o krótkie odpowiedzi końcowe.</b> 21% i tak nie jest czytane.</li>
+    <li><b>Tryb bypass nie jest droższy</b> ani bardziej błędogenny. Ostrożność kosztuje czas, nie oszczędza tokenów.</li>
+    <li><b>Uważać na „ok, dawaj”.</b> To 13% promptów i 18% rachunku.</li>
+  </ul>
+
+  <hr class="rule">
+  <h3 class="sub">Dla badaczy <span class="faintc">&nbsp;&nbsp;luki w danych</span></h3>
+  <ul class="rec">
+    <li><b>Atrybucja per plik</b> zamiast per sesja. Brakuje jej w 731 sesjach, w tym w sześciu najdroższych w zbiorze.</li>
+    <li><b>Transkrypty subagentów.</b> Task uruchomiono 20 622 razy, a koszt samych subagentów jest w danych niewidoczny.</li>
+    <li><b>Flaga błędu w Codeksie</b> i timestampy w Cursorze. Bez nich obie metryki są strukturalnym zerem.</li>
+  </ul>
+
+  <hr class="rule thick">
+  <h3 class="sub cap">Gdzie naprawdę siedzą pieniądze</h3>
+  <p class="def" style="text-align:center">Claude Code, czyli 83% rachunku. Kolumna po prawej jest tu najważniejsza.</p>
+  <div style="height:16px"></div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Mechanizm</th><th class="n">Kwota USD</th><th>Kto decyduje</th></tr></thead>
+      <tbody>
+        <tr class="emph"><td>Odczyty cache łącznie</td><td class="n">~61 800</td><td>harness</td></tr>
+        <tr><td>&nbsp;&nbsp;w tym czynsz za wyniki narzędzi</td><td class="n">30 746</td><td>harness</td></tr>
+        <tr><td>&nbsp;&nbsp;w tym za wyniki nigdy nieużyte</td><td class="n">~10 000</td><td>model i harness</td></tr>
+        <tr class="emph"><td>Zapisy cache po przerwach ponad 5 min</td><td class="n">9 223</td><td>harness</td></tr>
+        <tr><td>Tury po pushbacku, cały zbiór</td><td class="n">16 548</td><td>model</td></tr>
+        <tr><td>Ceremonia, polling, zgadywanie ścieżek, ucięcia</td><td class="n">~2 400</td><td>model</td></tr>
+        <tr><td>Output odpowiedzi, których nikt nie czyta</td><td class="n">89</td><td>model</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<!-- ══════════ STOPKA ══════════ -->
+<section class="blk">
+  <div class="stampwrap"><div class="stamp"><b>ROZLICZONE</b>116 677,00 USD &nbsp;·&nbsp; 9 770 sesji</div></div>
+  <div style="height:22px"></div>
+  <hr class="rule">
+  <h3 class="sub">Gdzie co leży</h3>
+  <div style="height:10px"></div>
+  <ul class="fine">
+    <li class="li sm"><span class="k">analysis/DESIGN.md</span><span class="dots"></span><span class="v">cztery warstwy, definicje tez</span></li>
+    <li class="li sm"><span class="k">analysis/ledger/</span><span class="dots"></span><span class="v">pięć tabel Parquet, 248 MB</span></li>
+    <li class="li sm"><span class="k">analysis/ledger.duckdb</span><span class="dots"></span><span class="v">wycenione wywołania i widoki</span></li>
+    <li class="li sm"><span class="k">analysis/queries/T01..T24.sql</span><span class="dots"></span><span class="v">tezy i generatory przypadków</span></li>
+    <li class="li sm"><span class="k">analysis/results/REPORT.md</span><span class="dots"></span><span class="v">raport warstwy 1, 121 CSV</span></li>
+    <li class="li sm"><span class="k">analysis/results/probes/</span><span class="dots"></span><span class="v">sondy na surowych plikach</span></li>
+    <li class="li sm"><span class="k">analysis/results/llm/</span><span class="dots"></span><span class="v">etykiety i werdykty sędziego</span></li>
+  </ul>
+
+  <hr class="rule">
+  <h3 class="sub">Odtworzenie od zera</h3>
+  <div style="height:10px"></div>
+  <ul class="fine">
+    <li class="li sm"><span class="k">build_ledger.py</span><span class="dots"></span><span class="v">24 s</span></li>
+    <li class="li sm"><span class="k">run_queries.py --rebuild</span><span class="dots"></span><span class="v">10 s</span></li>
+    <li class="li sm"><span class="k">raw_probes.py</span><span class="dots"></span><span class="v">11 s</span></li>
+    <li class="li sm"><span class="k">llm/classify_prompts.py, llm/judge.py</span><span class="dots"></span><span class="v">5 min, ~6 USD</span></li>
+  </ul>
+
+  <hr class="rule">
+  <div style="height:6px"></div>
+  <div class="qr" id="qr" aria-hidden="true"></div>
+  <div class="barcode" id="barcode" aria-hidden="true"></div>
+  <p class="slug" style="margin-top:10px">dziękujemy za wasze dane</p>
+  <p class="fine cap" style="margin-top:16px">Punkt odniesienia: paper SWE-chat, Stanford, arXiv 2604.20779.<br>Paper operuje na poziomie sesji i commitu. Ten raport schodzi<br>do poziomu pojedynczego wywołania API.</p>
+  <div style="height:12px"></div>
+  <p class="slug">&#183; koniec paragonu &#183;</p>
+</section>
+
+</main>
+
+<div class="tear bot" aria-hidden="true"></div>
+<div style="height:56px"></div>
+
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+var RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var root = document.documentElement;
+
+document.getElementById("themeBtn").addEventListener("click", function(){
+  var cur = root.getAttribute("data-theme");
+  if(!cur) cur = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+});
+
+var feed = document.getElementById("feed");
+window.addEventListener("scroll", function(){
+  var h = document.documentElement.scrollHeight - window.innerHeight;
+  feed.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + "%";
+}, {passive:true});
+
+var tip = document.getElementById("tip");
+function showTip(e, html){
+  tip.innerHTML = html; tip.style.opacity = "1";
+  tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px";
+}
+function hideTip(){ tip.style.opacity = "0"; }
+function pl(n){ return String(n).replace(".", ","); }
+
+/* ---------- pasek składników ---------- */
+var BILL = [
+  {k:"odczyty cache", p:63.9, usd:"74 556,00", c:"var(--s1)", lab:"odczyty cache 63,9%", w:"harness: co trzyma w kontekście"},
+  {k:"zapisy cache",  p:22.3, usd:"26 019,00", c:"var(--s2)", lab:"zapisy 22,3%",        w:"harness: TTL i wznawianie"},
+  {k:"output",        p:9.2,  usd:"10 734,00", c:"var(--s3)", lab:"output 9,2%",         w:"model: długość odpowiedzi"},
+  {k:"świeży input",  p:4.6,  usd:"5 367,00",  c:"var(--s4)", lab:"4,6%",                w:"prompt systemowy plus człowiek"}
+];
+(function(){
+  var host = document.getElementById("stack");
+  BILL.forEach(function(s){
+    var d = document.createElement("div");
+    d.className = "sg";
+    d.style.flex = "0 0 " + s.p + "%";
+    d.innerHTML = '<i style="background:' + s.c + '"></i><span>' + s.lab + '</span>';
+    d.addEventListener("mousemove", function(e){ showTip(e, "<b>" + s.k + "</b><br>" + s.usd + " USD &middot; " + pl(s.p) + "%<br>" + s.w); });
+    d.addEventListener("mouseleave", hideTip);
+    host.appendChild(d);
+  });
+})();
+
+/* ---------- dziesięć pozycji ---------- */
+var TEN = [
+  ["Rachunek to cache, nie prompt.","Odczyty cache to 64% kosztu, zapisy cache 22%, output 9%, świeży input 5%.","116 677,00 USD","T01"],
+  ["Przerwa na kawę kosztuje.","Po przerwie dłuższej niż 5 minut harness zapisuje cache od nowa. Po przerwie ponad godzinę pęka w 84% przypadków.","9 223,00 USD","T02"],
+  ["Wyniki narzędzi to połowa czynszu za kontekst.","W Claude Code 5% największych wyników, powyżej 10 tys. znaków, generuje 61% tego czynszu.","30 746,00 USD","T04"],
+  ["Jedna trzecia dużych wyników nigdy nie została użyta.","97% było potrzebne co najwyżej w małym fragmencie. Werdykt sędziego na 600 przypadkach.","32,5%","warstwa 3"],
+  ["80% pełnych przepisań plików było niepotrzebne.","Dotyczy plików, które model miał już w kontekście. Codex 30 do 53%, bo apply_patch wymusza diff.","79,8%","warstwa 3"],
+  ["Trzy czwarte strony promptu pisze harness, nie człowiek.","System-reminders, wyniki hooków, przypomnienia o zadaniach, diagnostyka.","376,8 mln znaków","T24"],
+  ["Pushback kosztuje 14% rachunku.","Tury po korekcie albo zgłoszeniu błędu. To jest cena mówienia agentowi, że zrobił to źle.","~16 000,00 USD","warstwa 2"],
+  ["1,4% wywołań Read to obrazki w base64.","Ale to 33% wszystkich znaków wciągniętych przez Read. Tego nie było w żadnej hipotezie.","~65 mln tokenów","sondy"],
+  ["Bash jest głównym śmietnikiem.","1,33 mld znaków wyników, a gzip ściska je średnio 3,6 razy.","~70% redundancji","sondy"],
+  ["Godziny ludzkie przebijają tokeny.","16 358 godzin pracy agenta. Przy 60 USD za godzinę to 8,6 razy koszt tokenów, jeśli człowiek patrzy.","8,6 razy","T12"]
+];
+(function(){
+  var ol = document.getElementById("items");
+  TEN.forEach(function(r, i){
+    var li = document.createElement("li");
+    li.className = "item";
+    li.innerHTML =
+      '<span class="ix">' + (i < 9 ? "0" : "") + (i + 1) + '</span>' +
+      '<span><span class="hd">' + r[0] + '</span>' +
+      '<span class="bd">' + r[1] + '</span>' +
+      '<span class="amt"><span class="src">' + r[3] + '</span><span class="dots"></span><span class="val">' + r[2] + '</span></span></span>';
+    ol.appendChild(li);
+  });
+})();
+
+/* ---------- sędzia ---------- */
+var JUDGE = [
+  {k:"żadna część wyniku",  p:32.5, c:"var(--rust)"},
+  {k:"mały fragment",       p:64.2, c:"var(--rust-deep)"},
+  {k:"większość",           p:3.2,  c:"var(--ink-2)"},
+  {k:"całość",              p:0.2,  c:"var(--ink-3)"}
+];
+(function(){
+  var w = document.getElementById("waf"), leg = document.getElementById("judgeLeg");
+  var cells = [];
+  JUDGE.forEach(function(j){
+    var n = Math.round(j.p * 2);
+    for(var i = 0; i < n; i++) cells.push(j);
+  });
+  while(cells.length < 200) cells.push(JUDGE[1]);
+  cells.length = 200;
+  cells.forEach(function(c){
+    var el = document.createElement("i");
+    el.style.background = c.c;
+    w.appendChild(el);
+  });
+  JUDGE.forEach(function(s){
+    var li = document.createElement("li");
+    li.className = "li sm";
+    li.innerHTML = '<span class="k"><span style="display:inline-block;width:9px;height:9px;background:' + s.c + ';margin-right:8px"></span>' + s.k + '</span>' +
+                   '<span class="dots"></span><span class="v">' + pl(s.p) + '%</span>';
+    leg.appendChild(li);
+  });
+})();
+
+/* ---------- prompty ---------- */
+var LABELS = [
+  {k:"follow_up",      s:30.7, c:34.1, n:"kolejny krok"},
+  {k:"meta_other",     s:16.0, c:13.4, n:"meta"},
+  {k:"question",       s:14.5, c:8.0,  n:"pytanie"},
+  {k:"approval",       s:13.2, c:18.2, n:"„ok, dawaj”"},
+  {k:"new_task",       s:10.1, c:12.1, n:"nowe zadanie"},
+  {k:"failure_report", s:8.0,  c:8.1,  n:"nie działa"},
+  {k:"correction",     s:6.1,  c:5.7,  n:"źle, miało być inaczej"},
+  {k:"interruption",   s:1.3,  c:0.4,  n:"przerwanie"}
+];
+(function(){
+  var host = document.getElementById("promptChart");
+  var h = document.createElement("div");
+  h.style.cssText = "display:grid;grid-template-columns:104px 1fr 1fr;gap:9px;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);padding-bottom:7px;border-bottom:1px solid var(--ink);margin-bottom:9px";
+  h.innerHTML = "<span></span><span>udział w promptach</span><span>udział w rachunku</span>";
+  host.appendChild(h);
+  LABELS.forEach(function(d){
+    var hot = d.k === "approval" || d.k === "correction" || d.k === "failure_report";
+    var row = document.createElement("div");
+    row.style.cssText = "display:grid;grid-template-columns:104px 1fr 1fr;gap:9px;align-items:center;padding:4px 0";
+    row.innerHTML =
+      '<span style="font-size:11px;color:' + (hot ? "var(--rust)" : "var(--ink-2)") + '">' + d.k + '</span>' +
+      '<span style="display:flex;align-items:center;gap:7px"><span class="pbar" style="flex:1;height:11px"><i class="gw dim" data-w="' + (d.s / 34.1 * 100) + '"></i></span><span style="font-size:10.5px;width:36px;text-align:right;color:var(--ink-3)">' + pl(d.s) + '%</span></span>' +
+      '<span style="display:flex;align-items:center;gap:7px"><span class="pbar" style="flex:1;height:11px"><i class="gw' + (hot ? "" : " deep") + '" data-w="' + (d.c / 34.1 * 100) + '"></i></span><span style="font-size:10.5px;width:36px;text-align:right;color:var(--ink)">' + pl(d.c) + '%</span></span>';
+    row.addEventListener("mousemove", function(e){
+      showTip(e, "<b>" + d.k + "</b> &middot; " + d.n + "<br>promptów " + pl(d.s) + "% &middot; rachunku " + pl(d.c) + "%");
+    });
+    row.addEventListener("mouseleave", hideTip);
+    host.appendChild(row);
+  });
+})();
+
+/* ---------- ogólne słupki ---------- */
+[].forEach.call(document.querySelectorAll(".bars[data-bars]"), function(host){
+  var data;
+  try { data = JSON.parse(host.getAttribute("data-bars")); } catch(err){ return; }
+  data.forEach(function(d){
+    var row = document.createElement("div");
+    row.className = "brow" + (d.hi ? " hi" : "");
+    row.innerHTML = '<span class="lb">' + d.l + '</span>' +
+      '<span class="pbar"><i class="gw' + (d.dim ? " dim" : (d.hi ? "" : " deep")) + '" data-w="' + (d.max ? (d.v / d.max * 100) : 0) + '"></i></span>' +
+      '<span class="vb">' + d.f + '</span>';
+    row.addEventListener("mousemove", function(e){ showTip(e, "<b>" + d.l + "</b> &middot; " + d.f); });
+    row.addEventListener("mouseleave", hideTip);
+    host.appendChild(row);
+  });
+});
+
+/* ---------- zastrzeżenia ---------- */
+var CAV = [
+  ["Cursor","nie ma tokenów, timestampów ani wyników narzędzi. Występuje tylko w liczeniu wywołań i u sędziego."],
+  ["Codex nie flaguje błędów narzędzi","zero z 309 060. Każda metryka „błąd narzędzia” dla Codeksa to zero z definicji, nie z jakości."],
+  ["731 sesji bez atrybucji","w tym najdroższe w zbiorze. „Porzucone” z T13 to w większości luka w danych, nie zjawisko."],
+  ["Czynsz dla Codeksa","to górna granica: model „wynik zostaje do końca sesji” nie uwzględnia kompakcji."],
+  ["Sędzia to DeepSeek V4-Pro","nie człowiek. Rubryki są wąskie i binarne. Tryb thinking trzeba było wyłączyć, bo zjadał limit tokenów."],
+  ["Klasyfikacja promptów","w 3 z 88 tys. odpowiedzi model zwrócił zły typ pola. Skorygowane deterministycznie."],
+  ["Stosunek czasu ludzkiego","zakłada, że człowiek czeka. Dolna granica to około 3 337 godzin samego pisania i myślenia."],
+  ["Ceny","są z dnia analizy i nie uwzględniają wyższych stawek za długi kontekst. Realne koszty Codeksa są zaniżone."],
+  ["Populacja","to użytkownicy Entire.io na publicznych repozytoriach. Nadreprezentacja hackathonów i repo samego Entire."],
+  ["Tokeny","liczone jako znaki przez 4 wszędzie tam, gdzie surowe usage nie rozbija wyniku narzędzia."]
+];
+(function(){
+  var host = document.getElementById("caveats");
+  CAV.forEach(function(c, i){
+    var d = document.createElement("div");
+    d.innerHTML = '<span class="ix">' + (i < 9 ? "0" : "") + (i + 1) + '</span><span><b>' + c[0] + '</b> ' + c[1] + '</span>';
+    host.appendChild(d);
+  });
+})();
+
+/* ---------- sześć tez ---------- */
+function tbl(cap, head, rows, al, emph){
+  var h = '<div class="tw"><table>';
+  if(cap) h += '<caption>' + cap + '</caption>';
+  h += '<thead><tr>';
+  head.forEach(function(c, i){ h += '<th' + (al[i] === "n" ? ' class="n"' : '') + '>' + c + '</th>'; });
+  h += '</tr></thead><tbody>';
+  rows.forEach(function(r, ri){
+    h += '<tr' + (emph === ri ? ' class="emph"' : '') + '>';
+    r.forEach(function(c, i){ h += '<td' + (al[i] === "n" ? ' class="n"' : '') + '>' + c + '</td>'; });
+    h += '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+
+var SIX = [
+  {
+    t:"Linie w commicie kontra wygenerowany kod",
+    def:"gen_lines_est = suma znaków w Write.content i Edit.new_string w sesji / 40. committed_lines = total_committed z atrybucji Entire. pct_survive_est = committed_lines / gen_lines_est. Tylko sesje z committed_lines &gt; 0.",
+    lead:"W trybach human i collab committed_lines zawiera kod napisany przez człowieka, stąd wartości powyżej 100%. Uczciwa liczba jest w wierszu vibe: w Codeksie przeżywa 17,2% wygenerowanych linii, w Claude Code 51%.",
+    body:
+      tbl("Przeżywalność i koszt na linię, per harness i tryb.",
+        ["Agent","Tryb","Sesji","Wygen.","W commicie","Przeżycie","USD","USD/linię"],
+        [["claude_code","collab","1 404","1 086 816","2 085 977","192%","18 562","0,0089"],
+         ["claude_code","human","1 611","1 321 923","10 962 446","829%","29 356","0,0027"],
+         ["claude_code","vibe","2 711","1 431 976","730 640","51%","25 031","0,0343"],
+         ["codex","collab","112","174 824","281 775","161%","2 677","0,0095"],
+         ["codex","human","108","208 229","653 242","314%","2 784","0,0043"],
+         ["codex","vibe","379","567 394","97 763","17,2%","7 481","0,0765"],
+         ["opencode","collab","46","52 651","83 524","159%","131","0,0016"],
+         ["opencode","human","73","48 118","94 550","196%","99","0,0010"],
+         ["opencode","vibe","83","116 522","29 540","25,4%","481","0,0163"]],
+        ["","","n","n","n","n","n","n"], 5) +
+      '<div style="height:16px"></div>' +
+      tbl("Rozkład przeżywalności per sesja, tryb vibe, sesje z co najmniej 400 wygenerowanymi znakami. Prawie 40% sesji vibe zostawia poniżej 10% tego, co wygenerowało.",
+        ["Przeżyło","Sesji"],
+        [["poniżej 10%","994"],["10 do 25%","455"],["25 do 50%","575"],["50 do 75%","341"],["75 do 100%","209"],["ponad 100%","376"]],
+        ["","n"], 0)
+  },
+  {
+    t:"Nieprzeczytane odpowiedzi",
+    def:"Odpowiedź końcowa = ostatnie wywołanie z tekstem w turze przed następnym promptem człowieka, z korektą dla Codeksa. read_time_s = (znaki / 5) / 250 słów na minutę. unread = czas do następnego promptu &lt; 0,5 &times; read_time_s. Przerwania wykluczone.",
+    lead:"Etykieta następnego promptu zdradza, co człowiek zrobił zamiast czytania. Przy „meta_other” mediana odpowiedzi ma 233 znaki i człowiek odpisuje po 36 sekundach: to potwierdzanie, nie czytanie. Przy „approval” odpowiedzi są najdłuższe, a mediana reakcji najkrótsza.",
+    body:
+      tbl("Nieprzeczytane odpowiedzi końcowe, per harness.",
+        ["Agent","Odp. końcowych","Nieprzecz.","% odp.","% tokenów","USD","Czytanie","Reakcja"],
+        [["claude_code","55 223","6 543","11,85%","20,2%","68,43","29,6 s","98,5 s"],
+         ["codex","9 501","2 257","23,76%","26,5%","19,35","48,8 s","94,5 s"],
+         ["opencode","1 804","115","6,37%","20,2%","1,00","43,4 s","170 s"]],
+        ["","n","n","n","n","n","n","n"]) +
+      '<div style="height:16px"></div>' +
+      tbl("To samo według etykiety NASTĘPNEGO promptu człowieka.",
+        ["Etykieta","Odp.","Nieprzecz.","%","Med. znaków","Med. reakcji","Długie &gt;3000"],
+        [["meta_other","9 167","2 752","30,0%","233","36 s","56"],
+         ["interruption","551","159","28,9%","237","26 s","5"],
+         ["approval","10 599","1 911","18,0%","976","73 s","385"],
+         ["follow_up","23 008","2 392","10,4%","806","114 s","472"],
+         ["correction","4 327","386","8,9%","719","91 s","41"],
+         ["question","10 521","865","8,2%","813","123 s","139"],
+         ["new_task","2 600","157","6,0%","476","207 s","30"],
+         ["failure_report","5 755","293","5,1%","520","154 s","13"]],
+        ["","n","n","n","n","n","n"], 0)
+  },
+  {
+    t:"Ekonomia subagentów",
+    def:"Luka w danych: transkrypty subagentów nie są w zbiorze. Wywołań z flagą isSidechain: 300 z 933 529, razem 2,62 USD. Poniżej wyłącznie narzędzie Task widziane z sesji rodzica, Claude Code.",
+    lead:"Sesje z Taskiem mają medianę kosztu 3 do 6 razy wyższą niż sesje bez, w każdym trybie. Nie wiemy, czy to Task je podraża, czy trudne sesje częściej sięgają po Taska, bo koszt samych subagentów jest w danych niewidoczny.",
+    body:
+      tbl("Sesje Claude Code z Taskiem i bez, per tryb.",
+        ["Tryb","Rodzaj","Sesji","Mediana USD","USD/linię","% z commitem"],
+        [["collab","bez Task","772","1,59","0,0030","99,4%"],
+         ["collab","z Task","789","5,32","0,0142","99,6%"],
+         ["human","bez Task","1 047","1,14","0,0011","81,9%"],
+         ["human","z Task","1 135","6,72","0,0039","89,4%"],
+         ["vibe","bez Task","1 719","1,45","0,0234","99,4%"],
+         ["vibe","z Task","1 299","4,44","0,0347","99,5%"]],
+        ["","","n","n","n","n"]) +
+      '<div style="height:16px"></div>' +
+      tbl("Sesje według liczby wywołań Task. Wyniki Task w kontekście rodzica: 17 833 wywołania w 3 542 sesjach, 91,3 mln znaków, mediana 3 136 znaków, czynsz 1 898 USD.",
+        ["Wywołań Task","Sesji","Wywołań","Mln znaków"],
+        [["1","1 128","1 128","7,8"],["2 do 3","1 024","2 544","17,5"],["4 do 10","980","5 654","34,0"],["11 do 30","355","5 811","24,8"],["ponad 30","55","2 696","7,1"]],
+        ["","n","n","n"])
+  },
+  {
+    t:"Kompakcja",
+    def:"Granica = zdarzenie system/compact_boundary lub microcompact_boundary w Claude Code, albo compacted w Codeksie. Reread = Read ścieżki czytanej w tej sesji przed granicą, w 20 wywołaniach narzędzi po granicy. Rozmiar redukcji nie jest zapisany w ledgerze.",
+    lead:"Kompakcja oszczędza kontekst, po czym model natychmiast odbudowuje jego część, płacąc za odczyt i za ponowny zapis do cache. 59% Readów zaraz po pełnej granicy dotyczy plików, które już widział.",
+    body:
+      tbl("Zasięg kompakcji. OpenCode i Cursor nie mają ani jednej granicy w całym zbiorze.",
+        ["Agent","Sesji","Z granicą","% sesji","Med. granic","Maks.","USD w tych sesjach"],
+        [["claude_code","7 230","746","10,32%","1","96","36 593"],
+         ["codex","1 167","302","25,88%","2","103","16 718"],
+         ["opencode","783","0","0%","&#8211;","&#8211;","&#8211;"],
+         ["cursor","86","0","0%","&#8211;","&#8211;","&#8211;"]],
+        ["","n","n","n","n","n","n"]) +
+      '<div style="height:16px"></div>' +
+      tbl("Ponowne czytanie po granicy, Claude Code.",
+        ["Rodzaj granicy","Readów","Już widzianych","% rereadów","Znaków","USD 1x","USD z recache"],
+        [["compact_boundary","6 968","4 121","59,14%","33 550 476","4,05","50,56"],
+         ["microcompact_boundary","1 249","517","41,39%","1 796 504","0,16","1,97"]],
+        ["","n","n","n","n","n","n"], 0) +
+      '<div style="height:16px"></div>' +
+      tbl("Najczęściej czytane ponownie po kompakcji.",
+        ["Ścieżka","Rereadów","Sesji","Znaków"],
+        [["cmd/entire/cli/strategy/manual_commit_hooks.go","257","48","1 846 415"],
+         ["src/rhea_bridge.py","71","4","893 850"],
+         ["scripts/rhea_query_persist.sh","52","1","188 644"],
+         ["static/index.html","51","5","128 889"],
+         ["cmd/entire/cli/strategy/manual_commit_condensation.go","51","26","405 641"],
+         ["cmd/entire/cli/hooks_claudecode_handlers.go","42","21","864 872"]],
+        ["","n","n","n"], 0)
+  },
+  {
+    t:"Czekanie na build w pętli",
+    def:"Polling = wywołanie Bash z sleep N, gh run watch albo wait. Burst = liczba pollingów w oknie 5 kolejnych wywołań narzędzi. USD = koszt wywołań API, które wydały polling, liczony na pełnym kontekście.",
+    lead:"Każde sprawdzenie statusu płaci cały kontekst. 589 wywołań ze snem powyżej 300 sekund przespało 202 godziny i kosztowało 105 USD w czynszu. Najczęstsza komenda w zbiorze to sleep 120: 326 wywołań w 27 sesjach.",
+    body:
+      tbl("Polling per harness.",
+        ["Agent","Wywołań Bash","Pollingów","% Bashy","Sesji","USD","Tokenów kontekstu"],
+        [["claude_code","291 956","7 041","2,41%","961","1 082","1 705 656 825"],
+         ["codex","220 422","2 974","1,35%","134","268","438 266 466"],
+         ["opencode","10 393","192","1,85%","21","9,93","21 538 021"],
+         ["cursor","2 480","109","4,40%","11","&#8211;","0"]],
+        ["","n","n","n","n","n","n"], 0) +
+      '<div style="height:16px"></div>' +
+      tbl("Długość snu. Krótkie sny są liczniejsze i łącznie droższe niż długie.",
+        ["Sleep","Wywołań","USD kontekstu","Godzin przespanych"],
+        [["poniżej 10 s","3 460","467","2,8"],
+         ["10 do 29 s","1 496","267","6,2"],
+         ["30 do 59 s","507","90","4,7"],
+         ["60 do 299 s","926","109","29,4"],
+         ["300 s i więcej","589","105","202,0"]],
+        ["","n","n","n"], 0) +
+      '<div style="height:16px"></div>' +
+      tbl("Serie pollingu.",
+        ["Burst","Pollingów","USD","Tokenów kontekstu"],
+        [["pojedynczy","5 690","809","1 285 345 232"],
+         ["2 na 5 wywołań","3 029","361","572 016 419"],
+         ["3 na 5 wywołań","975","104","166 578 048"],
+         ["4 i więcej na 5","622","84,89","141 521 613"]],
+        ["","n","n","n"])
+  },
+  {
+    t:"Gorące pliki edytowane równocześnie",
+    def:"Para nakładająca się = dwie sesje w tym samym repo, które edytowały ten sam plik, a ich okna [pierwsza edycja, ostatnia edycja] nachodzą na siebie w czasie zegarowym. Luka: równoczesność między subagentami w jednej sesji jest nieobserwowalna.",
+    lead:"2 908 nakładających się par sesji na 1 591 plikach. Gorące pliki nie są bardziej błędogenne od zimnych, 6,8% kontra 7,7% edycji z błędem, ale od połowy do czterech piątych ich edycji jest natychmiast korygowanych krótkim promptem człowieka.",
+    body:
+      '<div class="boxrow" style="margin-bottom:16px">' +
+        '<div><div class="bv">2 908</div><div class="bk">par nakładających się</div></div>' +
+        '<div><div class="bv">1 591</div><div class="bk">plików z nakładaniem</div></div>' +
+        '<div><div class="bv">32 127</div><div class="bk">plików edytowanych łącznie</div></div>' +
+        '<div><div class="bv">914</div><div class="bk">sesji zamieszanych</div></div>' +
+      '</div>' +
+      tbl("Najgorętsze pliki i to, co dzieje się zaraz po edycji.",
+        ["Repo i plik","Agent","Sesji","Użytk.","Edycji","% błędu","% korekty"],
+        [["E2E-Solution/cli<br>manual_commit_hooks.go","claude_code","120","8","745","9,13%","50,87%"],
+         ["entireio/cli-checkpoints<br>manual_commit_condensation.go","codex","100","9","341","4,99%","80,35%"],
+         ["henryph24/neuralips26<br>main.tex","claude_code","91","1","2 012","3,38%","74,75%"],
+         ["armelhbobdad/bmad-module-skill-forge<br>sprint-status.yaml","claude_code","90","1","223","7,17%","22,87%"],
+         ["entireio/cli-checkpoints<br>explain.go","codex","86","13","480","6,88%","67,50%"],
+         ["cyyeh/duckdb-data-agent<br>backend/app/agent.py","claude_code","66","1","259","6,18%","70,66%"]],
+        ["","","n","n","n","n","n"]) +
+      '<div style="height:16px"></div>' +
+      tbl("Przyczyna edycji gorącego pliku według sędziego, 200 przypadków, 40 plików po 5. Co czwarta edycja gorącego pliku to agent sprzątający po sobie, ale ponad połowa to po prostu architektura repozytorium. Pliki dokumentacyjne i konfiguracyjne: 0% regresji.",
+        ["Przyczyna","n","%"],
+        [["hub architektoniczny","110","55,0%"],
+         ["regresja agenta","56","28,0%"],
+         ["plik testowy","18","9,0%"],
+         ["iteracja użytkownika","14","7,0%"],
+         ["niejasne","1","0,5%"],
+         ["churn konfiguracji","1","0,5%"]],
+        ["","n","n"], 1)
+  }
+];
+(function(){
+  var host = document.getElementById("six");
+  SIX.forEach(function(d, i){
+    var sec = document.createElement("div");
+    sec.style.marginTop = "34px";
+    sec.innerHTML =
+      '<hr class="rule solid">' +
+      '<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px">' +
+        '<span style="color:var(--rust);font-size:11px;letter-spacing:.16em">TEZA ' + (i + 1) + '/6</span>' +
+      '</div>' +
+      '<h3 class="sub" style="font-size:14px;line-height:1.4">' + d.t + '</h3>' +
+      '<div class="def">' + d.def + '</div>' +
+      '<div style="height:14px"></div>' +
+      '<p style="font-size:12.5px">' + d.lead + '</p>' +
+      '<div style="height:18px"></div>' +
+      d.body;
+    host.appendChild(sec);
+  });
+})();
+
+/* ---------- kod kreskowy i QR ---------- */
+(function(){
+  var bc = document.getElementById("barcode"), seed = 116677, i;
+  for(i = 0; i < 64; i++){
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    var el = document.createElement("i");
+    el.style.width = (1 + (seed >> 8) % 4) + "px";
+    el.style.height = (70 + (seed >> 12) % 30) + "%";
+    bc.appendChild(el);
+  }
+  var qr = document.getElementById("qr"), s2 = 9770;
+  for(i = 0; i < 169; i++){
+    s2 = (s2 * 1103515245 + 12345) & 0x7fffffff;
+    var q = document.createElement("i");
+    var r = Math.floor(i / 13), c = i % 13;
+    var corner = (r < 3 && c < 3) || (r < 3 && c > 9) || (r > 9 && c < 3);
+    if(corner || ((s2 >> 10) % 100) < 46) q.className = "on";
+    qr.appendChild(q);
+  }
+})();
+
+/* ---------- suma odliczana ---------- */
+(function(){
+  var el = document.getElementById("grand"), target = 116677;
+  if(RM) return;
+  var t0 = null, dur = 1200;
+  function fmt(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + ",00"; }
+  function step(ts){
+    if(t0 === null) t0 = ts;
+    var p = Math.min(1, (ts - t0) / dur);
+    el.textContent = fmt(target * (1 - Math.pow(1 - p, 3)));
+    if(p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+})();
+
+/* ---------- nadruk słupków: rośnie, kiedy wjeżdża w kadr ---------- */
+function paint(el){
+  if(el.dataset.done) return;
+  el.dataset.done = "1";
+  var w = el.getAttribute("data-w") + "%";
+  if(RM){ el.style.width = w; return; }
+  requestAnimationFrame(function(){ el.style.width = w; });
+}
+if("IntersectionObserver" in window){
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(en){
+      if(!en.isIntersecting) return;
+      paint(en.target);
+      io.unobserve(en.target);
+    });
+  }, {rootMargin:"0px 0px -8% 0px"});
+  [].forEach.call(document.querySelectorAll(".gw"), function(el){ io.observe(el); });
+} else {
+  [].forEach.call(document.querySelectorAll(".gw"), paint);
+}
+
+/* ---------- aktywna pozycja ---------- */
+(function(){
+  var links = [].slice.call(document.querySelectorAll("#tillnav a")), map = {};
+  links.forEach(function(a){
+    var el = document.querySelector(a.getAttribute("href"));
+    if(el) map[el.id] = a;
+  });
+  if(!("IntersectionObserver" in window)) return;
+  var io2 = new IntersectionObserver(function(es){
+    es.forEach(function(en){
+      if(!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove("on"); });
+      if(map[en.target.id]) map[en.target.id].classList.add("on");
+    });
+  }, {rootMargin:"-35% 0px -55% 0px"});
+  Object.keys(map).forEach(function(id){ io2.observe(document.getElementById(id)); });
+})();
+})();
+</script>
+</body>
+</html>
