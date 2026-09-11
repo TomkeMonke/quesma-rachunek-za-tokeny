@@ -71,7 +71,12 @@
 }
 
 *,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:62px}
+html{
+  scroll-behavior:smooth;scroll-padding-top:62px;
+  /* wyciecia perforacji wystaja 7 px poza rolke; clip zamiast hidden,
+     zeby listwa kasy dalej trzymala sie na sticky */
+  overflow-x:clip;
+}
 body{
   margin:0;
   background:
@@ -81,7 +86,7 @@ body{
   font-family:var(--mono);font-size:13px;line-height:1.72;
   font-variant-numeric:tabular-nums;
   -webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
+  overflow-x:clip;
 }
 h1,h2,h3,h4,p,ul,ol,table,figure{margin:0}
 ul,ol{padding:0;list-style:none}
